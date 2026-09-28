@@ -42,6 +42,9 @@ pub const HOME_VAR: &str = "OWCLI_HOME";
 pub const ARQUIVO_DO_APP: &str = "openweights.json";
 /// O id do provedor que o lançador registra.
 pub const PROVEDOR: &str = "openweights";
+/// Onde o gateway do app escuta quando não há `openweights.json` para dizer:
+/// a porta preferida do `lr_owgw`.
+pub const BASE_PADRAO: &str = "http://127.0.0.1:11740/owcli/v1";
 /// Pedido do token (o `auth.command` do provedor aponta para cá).
 const FLAG_TOKEN: &str = "--ow-token";
 /// Quanto esperar o gateway local aceitar a conexão. É loopback: quando o
@@ -269,7 +272,11 @@ pub fn montar(
         }
         Some(c) => overrides.extend(provedor(c, casa, exe)?),
         None if precisa_de_modelo(&argv) => return Err(sem_app(casa)),
-        None => {}
+        // Sem o arquivo (o app nunca ligou o OwCLI), o que não pede modelo —
+        // `doctor`, `features` — continua apontado para o OpenWeights, e não
+        // para o provedor padrão do Codex: o `doctor` testaria o chatgpt.com
+        // e o api.openai.com.
+        None => overrides.extend(provedor_sem_app()),
     }
 
     let mut saida = Vec::with_capacity(argv.len() + overrides.len() * 2);
@@ -281,6 +288,17 @@ pub fn montar(
     }
     saida.extend(resto);
     Ok(saida)
+}
+
+/// O provedor no endereço padrão do gateway, sem token nem catálogo.
+fn provedor_sem_app() -> Vec<String> {
+    let p = format!("model_providers.{PROVEDOR}");
+    vec![
+        format!("model_provider={}", toml_str(PROVEDOR)),
+        format!("{p}.name={}", toml_str("OpenWeights")),
+        format!("{p}.base_url={}", toml_str(BASE_PADRAO)),
+        format!("{p}.wire_api={}", toml_str("responses")),
+    ]
 }
 
 /// O provedor, o catálogo, o modelo padrão e o token.

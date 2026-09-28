@@ -66,6 +66,13 @@ pub(super) async fn updates_check(config: &Config) -> DoctorCheck {
     let mut status = CheckStatus::Ok;
     let summary = "update configuration is locally consistent".to_string();
 
+    // OwCLI (fork): com a checagem de versão desligada — o lançador do OwCLI
+    // a desliga —, o doctor também não pergunta à rede qual é a mais recente.
+    if !config.check_for_update_on_startup {
+        details.push("latest version probe: skipped (update checks are off)".to_string());
+        return DoctorCheck::new("updates.status", "updates", status, summary).details(details);
+    }
+
     if doctor_managed_by_npm(current_exe.as_deref()) {
         details
             .push("npm update target: not inspected (PATH helpers are not executed)".to_string());
@@ -99,6 +106,10 @@ pub(super) async fn append_desktop_update(
     config: Option<&Config>,
     application: &InstalledApp,
 ) {
+    // OwCLI (fork): idem para o app de desktop do Codex.
+    if config.is_some_and(|config| !config.check_for_update_on_startup) {
+        return;
+    }
     let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
     #[cfg(target_os = "macos")]
     if let Some(home) = std::env::var_os("HOME").map(PathBuf::from)

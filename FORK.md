@@ -47,6 +47,7 @@ Base atual: `rust-v0.157.1` (2026-09-26).
 | `codex-rs/model-provider/src/provider.rs` | com `OWCLI` definido, `capabilities()` sem ferramenta em namespace e sem as hospedadas da OpenAI (web search, geração de imagem) | o llama.cpp descarta essas ferramentas sem erro, e as fontes de fora não as conhecem | um `if` no começo da função, marcado |
 | `codex-rs/core/src/tools/spec_plan.rs` | sem namespaces no provedor, `achatar_namespaces` em vez de descartar os namespaces | as ferramentas do MCP chegam ao modelo como `mcp__servidor__ferramenta` | o fim de `model_visible_specs` e uma função nova, marcados |
 | `codex-rs/core/src/tools/registry.rs` | `nome_achatado`, `chave()` (o nome achatado também acha a ferramenta), o dispatch troca pelo nome canônico, e o módulo de testes `owcli_achatar_tests.rs` | a chamada do modelo volta sem namespace | uma função livre, um método e três linhas no dispatch, marcados |
+| `codex-rs/cli/src/doctor/updates.rs` | com `check_for_update_on_startup` desligado, `updates_check` e `append_desktop_update` não consultam a rede | o `owcli doctor` perguntava ao GitHub (e, no macOS e no Windows, aos servidores do app de desktop) a versão mais recente, contra a checagem de versão desligada | dois `if` no começo das funções, marcados |
 | `codex-rs/exec/src/event_processor_with_human_output.rs` | cabeçalho "OwCLI v…" do `exec` com `OWCLI` definido | marca | uma expressão |
 
 **A marca só troca no produto.** O lançador define `OWCLI=1` no ambiente; os pontos acima

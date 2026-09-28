@@ -109,6 +109,22 @@ fn sem_o_app_so_roda_o_que_nao_precisa_de_modelo() {
 }
 
 #[test]
+fn sem_o_app_o_doctor_testa_o_openweights_e_nao_a_openai() {
+    let casa = tempfile::tempdir().unwrap();
+    let argv = vec!["owcli".into(), "doctor".into()];
+    let linha = texto(&montar(argv, casa.path(), None, Path::new("owcli")).unwrap()).join(" ");
+    assert!(
+        linha.contains(&format!("model_provider=\"{PROVEDOR}\"")),
+        "{linha}"
+    );
+    assert!(linha.contains(BASE_PADRAO), "{linha}");
+    assert!(
+        !linha.contains("auth.command"),
+        "sem token não há o que pedir"
+    );
+}
+
+#[test]
 fn com_o_catalogo_vazio_nao_abre_conversa_com_o_modelo_padrao_do_codex() {
     let casa = tempfile::tempdir().unwrap();
     let vazio = Conexao {
