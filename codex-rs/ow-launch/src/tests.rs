@@ -109,6 +109,26 @@ fn sem_o_app_so_roda_o_que_nao_precisa_de_modelo() {
 }
 
 #[test]
+fn com_o_catalogo_vazio_nao_abre_conversa_com_o_modelo_padrao_do_codex() {
+    let casa = tempfile::tempdir().unwrap();
+    let vazio = Conexao {
+        modelos: vec![],
+        ..conexao()
+    };
+    let erro = montar(
+        vec!["owcli".into(), "resume".into(), "--last".into()],
+        casa.path(),
+        Some(&vazio),
+        Path::new("owcli"),
+    )
+    .unwrap_err();
+    assert!(erro.contains("Servidor Local"), "{erro}");
+    // O histórico continua acessível sem modelo.
+    let argv = vec![OsString::from("owcli"), OsString::from("app-server")];
+    assert!(montar(argv, casa.path(), Some(&vazio), Path::new("owcli")).is_ok());
+}
+
+#[test]
 fn caminho_do_windows_vira_string_toml_valida() {
     let s = toml_str(r#"C:\Users\Pedro "P"\owcli.exe"#);
     let lido: toml::Table = format!("x = {s}").parse().unwrap();

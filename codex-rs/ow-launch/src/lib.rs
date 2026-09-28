@@ -262,6 +262,11 @@ pub fn montar(
     overrides.extend(DESLIGADOS.iter().map(|f| format!("features.{f}=false")));
 
     match conexao {
+        // Sem modelo no catálogo, o Codex cairia no padrão dele (um modelo da
+        // OpenAI) e cada pedido voltaria 404 do gateway.
+        Some(c) if c.modelos.is_empty() && precisa_de_modelo(&argv) => {
+            return Err(sem_modelos());
+        }
         Some(c) => overrides.extend(provedor(c, casa, exe)?),
         None if precisa_de_modelo(&argv) => return Err(sem_app(casa)),
         None => {}
@@ -362,6 +367,14 @@ fn sem_app(casa: &Path) -> String {
         arquivo.display(),
         arquivo.display()
     )
+}
+
+fn sem_modelos() -> String {
+    "O OpenWeights está aberto, mas não tem nenhum modelo para o OwCLI agora.\n\
+     Ligue o Servidor Local, ou uma fonte (OpenRouter, 9router) na tela Fontes do app.\n\
+     OpenWeights is open but has no model for OwCLI right now.\n\
+     Start the Local Server, or a source (OpenRouter, 9router) in the app's Sources screen."
+        .to_string()
 }
 
 /// O gateway do app aceita conexão? Só abre e fecha o TCP; quem responde
