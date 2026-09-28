@@ -108,6 +108,8 @@ fn fixos() -> Vec<(&'static str, String)> {
         ("otel.metrics_exporter", toml_str("none")),
         ("tui.notification_method", toml_str("osc9")),
         ("tui.notification_condition", toml_str("always")),
+        // As dicas falam de recursos do Codex e do ChatGPT que o OwCLI não tem.
+        ("tui.show_tooltips", "false".to_string()),
     ];
     if cfg!(windows) {
         // `elevated` cria usuários locais e exige administrador.

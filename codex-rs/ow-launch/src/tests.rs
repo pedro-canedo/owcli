@@ -62,6 +62,7 @@ fn os_overrides_entram_depois_do_arg0_e_a_linha_da_pessoa_segue_intacta() {
         "model_providers.openweights.auth.args=[\"--ow-token\"]",
         "model=\"local:qwen3-coder\"",
         "tui.notification_method=\"osc9\"",
+        "tui.show_tooltips=false",
     ] {
         assert!(
             o.iter().any(|x| x == esperado),

@@ -37,6 +37,7 @@ Base atual: `rust-v0.157.1` (2026-09-26).
 | `codex-rs/tui/src/startup_draft.rs` | idem, no rascunho inicial | marca | uma linha |
 | `codex-rs/tui/src/history_cell/session.rs` | cabeçalho "OwCLI (vX)" quando `marca_owcli()` | marca | duas expressões |
 | `codex-rs/tui/src/status/card.rs` | "OwCLI" no `/status` quando `marca_owcli()` | marca | uma expressão |
+| `codex-rs/tui/src/onboarding/trust_directory.rs` | "OwCLI can read, edit…" na confiança da pasta quando `marca_owcli()` | marca | um ramo |
 | `codex-rs/exec/src/event_processor_with_human_output.rs` | cabeçalho "OwCLI v…" do `exec` com `OWCLI` definido | marca | uma expressão |
 
 **A marca só troca no produto.** O lançador define `OWCLI=1` no ambiente; os pontos acima
