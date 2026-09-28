@@ -172,3 +172,47 @@ fn o_nome_do_binario_decide_o_modo() {
 use codex_protocol::openai_models::InputModality;
 use codex_protocol::openai_models::ModelsResponse;
 use codex_protocol::openai_models::ReasoningEffort;
+
+#[test]
+fn o_endereco_do_gateway_sai_da_base_url() {
+    assert_eq!(
+        host_e_porta("http://127.0.0.1:11740/owcli/v1").as_deref(),
+        Some("127.0.0.1:11740")
+    );
+    assert_eq!(
+        host_e_porta("http://[::1]:11740/owcli/v1").as_deref(),
+        Some("[::1]:11740")
+    );
+    assert_eq!(
+        host_e_porta("http://localhost/v1").as_deref(),
+        Some("localhost:80")
+    );
+    assert_eq!(
+        host_e_porta("https://exemplo.com").as_deref(),
+        Some("exemplo.com:443")
+    );
+    assert_eq!(host_e_porta("127.0.0.1:11740"), None);
+    assert_eq!(host_e_porta("http:///v1"), None);
+}
+
+#[test]
+fn a_sondagem_distingue_app_aberto_de_app_fechado() {
+    let aberto = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let porta = aberto.local_addr().unwrap().port();
+    let espera = std::time::Duration::from_millis(500);
+    assert!(gateway_responde(
+        &format!("http://127.0.0.1:{porta}/owcli/v1"),
+        espera
+    ));
+
+    // Uma porta que acabou de ser liberada: ninguém escuta nela.
+    let fechada = {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        l.local_addr().unwrap().port()
+    };
+    assert!(!gateway_responde(
+        &format!("http://127.0.0.1:{fechada}/owcli/v1"),
+        espera
+    ));
+    assert!(!gateway_responde("sem esquema", espera));
+}

@@ -25,9 +25,12 @@
 mod catalogo;
 
 use std::ffi::OsString;
+use std::net::TcpStream;
+use std::net::ToSocketAddrs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use serde::Deserialize;
 
@@ -41,6 +44,9 @@ pub const ARQUIVO_DO_APP: &str = "openweights.json";
 pub const PROVEDOR: &str = "openweights";
 /// Pedido do token (o `auth.command` do provedor aponta para cá).
 const FLAG_TOKEN: &str = "--ow-token";
+/// Quanto esperar o gateway local aceitar a conexão. É loopback: quando o
+/// app está aberto, responde em microssegundos.
+const ESPERA_DO_GATEWAY: Duration = Duration::from_millis(800);
 
 /// O que o app escreve em `openweights.json` (contrato v1).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -171,6 +177,16 @@ pub fn preparar() {
         let token = conexao.and_then(|c| c.token).unwrap_or_default();
         println!("{token}");
         std::process::exit(0);
+    }
+
+    // O arquivo fica na casa depois de o app fechar: sem esta checagem, a TUI
+    // abriria e cada pedido falharia só depois das novas tentativas.
+    if let Some(c) = conexao.as_ref()
+        && precisa_de_modelo(&argv)
+        && !gateway_responde(&c.base_url, ESPERA_DO_GATEWAY)
+    {
+        eprintln!("{}", app_fechado(&c.base_url));
+        std::process::exit(2);
     }
 
     let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("owcli"));
@@ -345,6 +361,49 @@ fn sem_app(casa: &Path) -> String {
          Open OpenWeights and turn OwCLI on from the OwCLI screen.",
         arquivo.display(),
         arquivo.display()
+    )
+}
+
+/// O gateway do app aceita conexão? Só abre e fecha o TCP; quem responde
+/// pelo resto (token, fonte fora do ar) é o próprio gateway, com mensagem.
+pub fn gateway_responde(base_url: &str, espera: Duration) -> bool {
+    let Some(endereco) = host_e_porta(base_url) else {
+        return false;
+    };
+    let Ok(destinos) = endereco.to_socket_addrs() else {
+        return false;
+    };
+    destinos
+        .into_iter()
+        .any(|d| TcpStream::connect_timeout(&d, espera).is_ok())
+}
+
+/// `http://127.0.0.1:11740/owcli/v1` → `127.0.0.1:11740`.
+fn host_e_porta(base_url: &str) -> Option<String> {
+    let (esquema, resto) = base_url.split_once("://")?;
+    let autoridade = resto.split(['/', '?', '#']).next()?;
+    if autoridade.is_empty() {
+        return None;
+    }
+    // Sem porta explícita, a do esquema (IPv6 vem entre colchetes).
+    let tem_porta = autoridade
+        .rsplit_once(':')
+        .is_some_and(|(_, p)| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()));
+    Some(if tem_porta {
+        autoridade.to_string()
+    } else if esquema.eq_ignore_ascii_case("https") {
+        format!("{autoridade}:443")
+    } else {
+        format!("{autoridade}:80")
+    })
+}
+
+fn app_fechado(base_url: &str) -> String {
+    format!(
+        "O OpenWeights não está respondendo em {base_url}.\n\
+         Abra o app: o OwCLI pensa com os modelos dele.\n\
+         OpenWeights is not answering at {base_url}.\n\
+         Open the app: OwCLI runs on its models."
     )
 }
 
