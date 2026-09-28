@@ -32,6 +32,28 @@ Base atual: `rust-v0.157.1` (2026-09-26).
 | `codex-rs/Cargo.toml` | `ow-launch` em `members` e em `[workspace.dependencies]` | o crate nosso entra no workspace | duas linhas, marcadas com `OwCLI (fork)` |
 | `codex-rs/cli/Cargo.toml` | dependência `ow-launch` | o `main` chama o lançador | uma linha, marcada |
 | `codex-rs/cli/src/main.rs` | `ow_launch::preparar()` na primeira linha do `main`; `MultitoolCli::parse_from(ow_launch::argumentos())` no lugar de `parse()` | a linha de comando ganha os `-c` do OwCLI antes do clap; a casa é definida antes de qualquer thread | duas linhas |
+| `codex-rs/tui/src/chatwidget.rs` | `marca_owcli()` e `placeholder_do_compositor()` | a marca troca só no produto | duas funções, marcadas |
+| `codex-rs/tui/src/chatwidget/constructor.rs` | o compositor usa `placeholder_do_compositor()` | marca | uma linha |
+| `codex-rs/tui/src/startup_draft.rs` | idem, no rascunho inicial | marca | uma linha |
+| `codex-rs/tui/src/history_cell/session.rs` | cabeçalho "OwCLI (vX)" quando `marca_owcli()` | marca | duas expressões |
+| `codex-rs/tui/src/status/card.rs` | "OwCLI" no `/status` quando `marca_owcli()` | marca | uma expressão |
+| `codex-rs/exec/src/event_processor_with_human_output.rs` | cabeçalho "OwCLI v…" do `exec` com `OWCLI` definido | marca | uma expressão |
+
+**A marca só troca no produto.** O lançador define `OWCLI=1` no ambiente; os pontos acima
+escolhem o texto por ela. Os testes do upstream não definem a variável, então veem o texto
+original: nenhum teste e nenhum snapshot do upstream muda (são 289 snapshots com "Codex" e
+dezenas de testes com a marca escrita — trocar todos transformaria cada versão em horas de
+conflito). O resto dos textos com "Codex" fica para uma camada própria.
+
+**O binário continua `codex` no cargo.** 39 arquivos de teste do upstream o procuram por esse
+nome. O pacote do runtime entrega o mesmo executável como `owcli` (`owcli.exe` no Windows), e o
+modo vem do nome: `owcli` é sempre o produto; `codex` só vira OwCLI com `OWCLI_HOME` definido
+(assim o build do cargo e os testes do upstream rodam como o upstream).
+
+**Testes do upstream que falham fora da CI deles** (conferido com o código original, não é o
+fork): a biblioteca da TUI precisa de `RUST_MIN_STACK=16777216` (um teste estoura a pilha
+padrão e aborta o binário inteiro), e alguns testes de worktree, git e largura de cabeçalho
+dependem do ambiente.
 
 A licença Apache-2.0 pede aviso nos arquivos modificados: esta tabela é esse aviso, e cada
 trecho editado leva um comentário `OwCLI (fork)`.

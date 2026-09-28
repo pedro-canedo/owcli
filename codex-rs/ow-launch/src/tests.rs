@@ -150,14 +150,22 @@ fn o_catalogo_tem_os_modelos_do_app_e_volta_pelo_serde_do_codex() {
 }
 
 #[test]
-fn auxiliares_do_sandbox_nao_sao_o_cli() {
-    assert!(e_o_cli(Some(&OsString::from("/opt/ow/owcli"))));
+fn o_nome_do_binario_decide_o_modo() {
+    let de = |s: &str| OsString::from(s);
+    assert_eq!(modo(Some(&de("/opt/ow/owcli")), false), Modo::OwCli);
     #[cfg(windows)]
-    assert!(e_o_cli(Some(&OsString::from(r"C:\ow\owcli.exe"))));
-    assert!(!e_o_cli(Some(&OsString::from(
-        "/tmp/x/codex-linux-sandbox"
-    ))));
-    assert!(!e_o_cli(Some(&OsString::from("apply_patch"))));
+    assert_eq!(modo(Some(&de(r"C:\ow\owcli.exe")), false), Modo::OwCli);
+    // O build do cargo (e os testes do upstream) só vira OwCLI com OWCLI_HOME.
+    assert_eq!(
+        modo(Some(&de("/target/release/codex")), false),
+        Modo::Upstream
+    );
+    assert_eq!(modo(Some(&de("/target/release/codex")), true), Modo::OwCli);
+    assert_eq!(
+        modo(Some(&de("/tmp/x/codex-linux-sandbox")), false),
+        Modo::Auxiliar
+    );
+    assert_eq!(modo(Some(&de("apply_patch")), true), Modo::Auxiliar);
 }
 
 use codex_protocol::openai_models::InputModality;

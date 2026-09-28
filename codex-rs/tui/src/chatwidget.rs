@@ -2102,6 +2102,22 @@ impl Drop for ChatWidget {
 }
 
 const PLACEHOLDER: &str = "Ask Codex to do anything";
+
+// OwCLI (fork): a marca só troca no produto — o lançador (`ow-launch`) define
+// `OWCLI` no ambiente. Os testes do upstream não definem, e os snapshots
+// continuam os dele.
+pub(crate) fn marca_owcli() -> bool {
+    std::env::var_os("OWCLI").is_some()
+}
+
+// OwCLI (fork): marca.
+pub(crate) fn placeholder_do_compositor() -> &'static str {
+    if marca_owcli() {
+        "Ask OwCLI to do anything"
+    } else {
+        PLACEHOLDER
+    }
+}
 const SIDE_PLACEHOLDER: &str = "Ask a follow-up question";
 
 // Extract the first bold (Markdown) element in the form **...** from `s`.

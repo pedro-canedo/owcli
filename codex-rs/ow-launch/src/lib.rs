@@ -143,21 +143,25 @@ static ARGUMENTOS: OnceLock<Vec<OsString>> = OnceLock::new();
 ///
 /// Define a casa, responde ao `--ow-token` e monta a linha de comando que o
 /// `main` do upstream vai parsear (leia com [`argumentos`]).
+///
+/// O modo vem do nome do binário: o pacote entrega `owcli`, e aí é sempre o
+/// OwCLI. O cargo gera `codex` — é esse que os testes do upstream rodam, com
+/// um `CODEX_HOME` próprio —, e ele só vira OwCLI com `OWCLI_HOME` definido;
+/// sem isso, comporta-se exatamente como o upstream.
 pub fn preparar() {
     let argv: Vec<OsString> = std::env::args_os().collect();
+    if modo(argv.first(), std::env::var_os(HOME_VAR).is_some()) != Modo::OwCli {
+        let _ = ARGUMENTOS.set(argv);
+        return;
+    }
     let casa = casa();
     let _ = std::fs::create_dir_all(&casa);
     // SAFETY: primeira linha do `main`, com o processo ainda de uma thread
     // só — ninguém lê o ambiente em paralelo.
     unsafe {
         std::env::set_var("CODEX_HOME", &casa);
-    }
-
-    // Chamado como auxiliar (sandbox do Linux, apply_patch): o arg0 decide e
-    // a linha de comando não é nossa.
-    if !e_o_cli(argv.first()) {
-        let _ = ARGUMENTOS.set(argv);
-        return;
+        // A marca do produto nas telas (cabeçalho, placeholder, `exec`).
+        std::env::set_var("OWCLI", "1");
     }
 
     let conexao = ler_conexao(&casa);
@@ -197,15 +201,28 @@ pub fn casa() -> PathBuf {
         .join(".owcli")
 }
 
-fn e_o_cli(argv0: Option<&OsString>) -> bool {
-    let Some(argv0) = argv0 else {
-        return true;
-    };
-    let nome = Path::new(argv0)
-        .file_stem()
+#[derive(Debug, PartialEq, Eq)]
+enum Modo {
+    /// O produto: casa, provedor e catálogo do OpenWeights.
+    OwCli,
+    /// O binário do upstream sem mudança nenhuma (build do cargo, testes).
+    Upstream,
+    /// Chamado como auxiliar (sandbox do Linux, apply_patch): o arg0 decide e
+    /// a linha de comando não é nossa.
+    Auxiliar,
+}
+
+fn modo(argv0: Option<&OsString>, owcli_home_definido: bool) -> Modo {
+    let nome = argv0
+        .and_then(|a| Path::new(a).file_stem())
         .map(|n| n.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_default();
-    nome == "owcli" || nome == "codex"
+    match nome.as_str() {
+        "owcli" => Modo::OwCli,
+        "codex" if owcli_home_definido => Modo::OwCli,
+        "codex" => Modo::Upstream,
+        _ => Modo::Auxiliar,
+    }
 }
 
 fn ler_conexao(casa: &Path) -> Option<Conexao> {
