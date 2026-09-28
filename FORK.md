@@ -22,6 +22,12 @@ o nome do produto é OwCLI e a relação aparece só como "baseado no OpenAI Cod
    `sync/upstream-<tag>`. O `Cargo.lock` é regenerado, não mesclado à mão.
 5. Os nomes internos continuam `codex-*`: renomear transformaria cada sincronização em
    conflito. Muda o que a pessoa vê.
+6. **Os workflows do upstream ficam desativados** no GitHub (`gh workflow disable`), não
+   apagados: apagar viraria conflito a cada sincronização. Só roda o que é nosso. O
+   `dependabot.yaml` e o `CODEOWNERS` (equipes da OpenAI) foram apagados: um abriria PRs de
+   dependência no nosso repositório, o outro pediria revisão a quem não existe aqui.
+
+Repositório: [pedro-canedo/owcli](https://github.com/pedro-canedo/owcli).
 
 Base atual: `rust-v0.157.1` (2026-09-26).
 
