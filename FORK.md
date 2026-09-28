@@ -83,8 +83,14 @@ com permissão só do dono:
   (`owcli --ow-token`, via `auth.command`) e renova a cada minuto.
 - O modelo padrão só entra quando a `config.toml` da pessoa não escolhe um.
 
-Sem o arquivo, o que conversa com modelo sai com uma mensagem pedindo para abrir o app;
-`--help`, `--version`, `app-server`, `sandbox` e afins rodam normalmente.
+O que conversa com modelo sai com código 2 e uma mensagem (português e inglês) em três casos:
+sem o arquivo; com o arquivo mas o gateway sem responder (o app foi fechado, e o lançador sonda
+o TCP do `baseUrl` por até 800 ms); e com `modelos` vazio (sem isso o Codex cairia no modelo
+padrão dele, um da OpenAI, e cada pedido voltaria 404). `--help`, `--version`, `--ow-token`,
+`app-server` (o histórico), `sandbox` e afins rodam normalmente nos três.
+
+O app escolhe o modelo de cada sessão (`--model`, lembrado entre sessões) e, ao continuar uma
+conversa, usa o modelo gravado nela quando ele ainda está no catálogo.
 
 ## O que foi medido (spike de 2026-09-28)
 
