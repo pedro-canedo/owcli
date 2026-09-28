@@ -28,6 +28,8 @@ chrono = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 clap_complete = { workspace = true }
 codex-app-server = { workspace = true }
+# OwCLI (fork): casa, provedor e catálogo do OpenWeights. Ver FORK.md.
+ow-launch = { workspace = true }
 codex-app-server-daemon = { workspace = true }
 codex-app-server-protocol = { workspace = true }
 codex-app-server-test-client = { workspace = true }
