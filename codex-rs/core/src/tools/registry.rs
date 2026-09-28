@@ -287,6 +287,20 @@ pub(crate) struct RegisteredTool {
     pub(crate) exposure: ToolExposure,
 }
 
+/// OwCLI (fork): o nome de primeiro nível de uma ferramenta em namespace,
+/// para provedores sem namespaces: `mcp__servidor__` + `ferramenta` vira
+/// `mcp__servidor__ferramenta`, o mesmo formato legado do upstream.
+pub(crate) fn nome_achatado(name: &ToolName) -> String {
+    match name.namespace.as_deref() {
+        Some(namespace) if !name.is_default_namespace() => format!(
+            "{}__{}",
+            namespace.trim_end_matches('_'),
+            name.name.trim_start_matches('_')
+        ),
+        _ => name.name.clone(),
+    }
+}
+
 #[derive(Default)]
 pub struct ToolRegistry {
     tools: IndexMap<ToolName, RegisteredTool>,
@@ -478,9 +492,28 @@ impl ToolRegistry {
     }
 
     pub(crate) fn tool(&self, name: &ToolName) -> Option<Arc<dyn CoreToolRuntime>> {
-        self.tools
-            .get(&name.clone().with_default_namespace())
+        self.chave(name)
+            .and_then(|chave| self.tools.get(&chave))
             .map(|tool| Arc::clone(&tool.runtime))
+    }
+
+    /// A chave registrada para `name`.
+    ///
+    /// OwCLI (fork): com um provedor sem namespaces, o modelo chama
+    /// `mcp__servidor__ferramenta` no namespace padrão; esse nome também acha a
+    /// ferramenta (ver `spec_plan::achatar_namespaces`).
+    fn chave(&self, name: &ToolName) -> Option<ToolName> {
+        let name = name.clone().with_default_namespace();
+        if self.tools.contains_key(&name) {
+            return Some(name);
+        }
+        if !name.is_default_namespace() {
+            return None;
+        }
+        self.tools
+            .keys()
+            .find(|chave| !chave.is_default_namespace() && nome_achatado(chave) == name.name)
+            .cloned()
     }
 
     #[cfg(test)]
@@ -505,7 +538,7 @@ impl ToolRegistry {
     }
 
     pub(crate) fn supports_parallel_tool_calls(&self, name: &ToolName) -> Option<bool> {
-        let tool = self.tools.get(&name.clone().with_default_namespace())?;
+        let tool = self.tools.get(&self.chave(name)?)?;
         Some(tool.exposure != ToolExposure::Hidden && tool.runtime.supports_parallel_tool_calls())
     }
 
@@ -518,6 +551,10 @@ impl ToolRegistry {
         mut invocation: ToolInvocation,
         call_state: Option<Arc<ToolCallState>>,
     ) -> Result<AnyToolResult, FunctionCallError> {
+        // OwCLI (fork): o nome achatado segue daqui em diante como o canônico.
+        if let Some(chave) = self.chave(&invocation.tool_name) {
+            invocation.tool_name = chave;
+        }
         let tool_name = invocation.tool_name.clone();
         let call_id_owned = invocation.call_id.clone();
         let otel = invocation.step_context.session_telemetry.clone();
@@ -849,3 +886,8 @@ fn unsupported_tool_call_message(payload: &ToolPayload, tool_name: &ToolName) ->
 #[cfg(test)]
 #[path = "registry_tests.rs"]
 mod tests;
+
+// OwCLI (fork): ferramentas em namespace com um provedor que não os aceita.
+#[cfg(test)]
+#[path = "owcli_achatar_tests.rs"]
+mod owcli_achatar_tests;

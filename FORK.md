@@ -38,6 +38,9 @@ Base atual: `rust-v0.157.1` (2026-09-26).
 | `codex-rs/tui/src/history_cell/session.rs` | cabeçalho "OwCLI (vX)" quando `marca_owcli()` | marca | duas expressões |
 | `codex-rs/tui/src/status/card.rs` | "OwCLI" no `/status` quando `marca_owcli()` | marca | uma expressão |
 | `codex-rs/tui/src/onboarding/trust_directory.rs` | "OwCLI can read, edit…" na confiança da pasta quando `marca_owcli()` | marca | um ramo |
+| `codex-rs/model-provider/src/provider.rs` | com `OWCLI` definido, `capabilities()` sem ferramenta em namespace e sem as hospedadas da OpenAI (web search, geração de imagem) | o llama.cpp descarta essas ferramentas sem erro, e as fontes de fora não as conhecem | um `if` no começo da função, marcado |
+| `codex-rs/core/src/tools/spec_plan.rs` | sem namespaces no provedor, `achatar_namespaces` em vez de descartar os namespaces | as ferramentas do MCP chegam ao modelo como `mcp__servidor__ferramenta` | o fim de `model_visible_specs` e uma função nova, marcados |
+| `codex-rs/core/src/tools/registry.rs` | `nome_achatado`, `chave()` (o nome achatado também acha a ferramenta), o dispatch troca pelo nome canônico, e o módulo de testes `owcli_achatar_tests.rs` | a chamada do modelo volta sem namespace | uma função livre, um método e três linhas no dispatch, marcados |
 | `codex-rs/exec/src/event_processor_with_human_output.rs` | cabeçalho "OwCLI v…" do `exec` com `OWCLI` definido | marca | uma expressão |
 
 **A marca só troca no produto.** O lançador define `OWCLI=1` no ambiente; os pontos acima
@@ -101,9 +104,14 @@ Codex 0.157.1 **sem modificação** contra o llama-server b10441 do OpenWeights
   **zero reescrita de requisição**, com Qwen3-Coder-30B (Q2_K) e Qwen3-8B.
 - Com os resumos de raciocínio desligados no catálogo, o raciocínio volta com `summary: []` e
   o shim do llama.cpp aceita (o bug llama.cpp#29159 é com `null`).
-- **MCP não funciona** com modelo local: o Codex manda as ferramentas MCP como
-  `type: "namespace"`, e o shim do llama.cpp só aceita `function` (llama.cpp#24295). Fica para
-  uma costura própria (achatar por provedor).
+- **MCP não funcionava** com modelo local: o Codex manda as ferramentas MCP como
+  `type: "namespace"`, e o shim do llama.cpp só aceita `function` (llama.cpp#24295): o log do
+  llama-server mostra `unsupported Responses tool type 'namespace' skipped`, e o modelo nem vê
+  a ferramenta. Com o provedor declarando que não aceita namespace, as ferramentas vão
+  achatadas (`mcp__eco__eco`), e o registro reconhece o nome na volta. Medido com um servidor
+  MCP de teste e o Qwen3-Coder-30B: a chamada chega ao servidor e a resposta traz o marcador
+  que só ele conhece. A aprovação de ferramenta MCP continua a do upstream (com aprovação
+  `never` e sem `default_tools_approval_mode = "approve"`, a chamada é recusada).
 - O `apply_patch` do upstream só existe como ferramenta `freeform`; com modelo local a edição
   vai pelo shell (`apply_patch` como comando, `sed`, reescrita), e funciona.
 - Rede, com `strace`: sem os desligamentos do lançador, o Codex fala com chatgpt.com e com o

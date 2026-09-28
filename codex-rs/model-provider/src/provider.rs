@@ -416,6 +416,19 @@ impl ModelProvider for ConfiguredModelProvider {
             RemoteCompactionSupport::Unsupported
         };
 
+        // OwCLI (fork): o gateway do OpenWeights leva ao llama.cpp e a fontes
+        // de fora, e nenhuma aceita ferramenta em namespace nem as ferramentas
+        // hospedadas da OpenAI — o llama.cpp as descarta sem erro.
+        if std::env::var_os("OWCLI").is_some() {
+            return ProviderCapabilities {
+                namespace_tools: false,
+                image_generation: false,
+                web_search: false,
+                external_web_access: false,
+                remote_compaction,
+            };
+        }
+
         ProviderCapabilities {
             remote_compaction,
             ..ProviderCapabilities::default()

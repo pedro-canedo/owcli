@@ -556,12 +556,45 @@ fn build_model_visible_specs(
     }
     specs.extend(hosted_specs);
 
-    merge_into_namespaces(specs)
-        .into_iter()
-        .filter(|spec| {
-            namespace_tools_enabled(turn_context) || !matches!(spec, ToolSpec::Namespace(_))
-        })
-        .collect()
+    let specs = merge_into_namespaces(specs);
+    if namespace_tools_enabled(turn_context) {
+        return specs;
+    }
+    // OwCLI (fork): sem namespaces no provedor, as ferramentas deles (as do
+    // MCP) viram funções com o nome qualificado em vez de sumirem; o registro
+    // reconhece esse nome na volta.
+    achatar_namespaces(specs)
+}
+
+/// OwCLI (fork): cada ferramenta de um namespace vira uma de primeiro nível,
+/// com o nome de `registry::nome_achatado` (`mcp__servidor__ferramenta`).
+pub(crate) fn achatar_namespaces(specs: Vec<ToolSpec>) -> Vec<ToolSpec> {
+    let mut saida = Vec::with_capacity(specs.len());
+    for spec in specs {
+        let ToolSpec::Namespace(namespace) = spec else {
+            saida.push(spec);
+            continue;
+        };
+        let achatado = |nome: String| {
+            crate::tools::registry::nome_achatado(&ToolName::namespaced(
+                namespace.name.clone(),
+                nome,
+            ))
+        };
+        for tool in namespace.tools {
+            match tool {
+                codex_tools::ResponsesApiNamespaceTool::Function(mut f) => {
+                    f.name = achatado(std::mem::take(&mut f.name));
+                    saida.push(ToolSpec::Function(f));
+                }
+                codex_tools::ResponsesApiNamespaceTool::Custom(mut c) => {
+                    c.name = achatado(std::mem::take(&mut c.name));
+                    saida.push(ToolSpec::Freeform(c));
+                }
+            }
+        }
+    }
+    saida
 }
 
 fn spec_for_model_request(
